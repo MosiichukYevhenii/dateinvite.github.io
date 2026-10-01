@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Підеш зі мною в кіно?</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff0ea;--ink:#2b1a3f;--muted:#6d5a80;--accent:#ff4d6d;--accent-ink:#fff;--soft:#ffd3dc;--no:#e6dcf2;--card:rgba(255,255,255,.84);
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1f1633;--ink:#fdeaf1;--muted:#c0adcf;--accent:#ff7b94;--accent-ink:#2b1a3f;--soft:#43294f;--no:#3a2d54;--card:rgba(31,22,51,.84)}}
+:root[data-theme="dark"]{--bg:#1f1633;--ink:#fdeaf1;--muted:#c0adcf;--accent:#ff7b94;--accent-ink:#2b1a3f;--soft:#43294f;--no:#3a2d54;--card:rgba(31,22,51,.84)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;min-height:100%;background:linear-gradient(120deg,#ff9aa2,#ffb86b,#ffe66d,#8fe388,#6ec6ff,#a78bfa,#ff9aa2) 0 0/300% 300%;animation:flow 20s linear infinite;color:var(--ink);font-family:Onest,system-ui,sans-serif;display:grid;place-items:center;overflow:hidden}
+main{width:min(560px,100% - 40px);text-align:left;position:relative;z-index:1;background:var(--card);border-radius:28px;padding:36px 32px;backdrop-filter:blur(6px)}
+@keyframes flow{to{background-position:300% 0}}
+.doodle{position:fixed;z-index:0;pointer-events:none;animation:bob 6s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translateY(-18px) rotate(var(--r,10deg))}}
+input[type=datetime-local]{font:inherit;font-size:18px;padding:12px 16px;border-radius:14px;border:2px solid var(--soft);background:var(--bg);color:var(--ink);max-width:100%}
+#cal{margin-top:16px}
+#cal[disabled]{opacity:.45;cursor:not-allowed}
+.note{font-size:14px;color:var(--muted);margin:14px 0 0}
+.moon{font-size:56px;line-height:1;margin-bottom:18px}
+h1{font-family:Unbounded,Onest,sans-serif;font-weight:800;font-size:clamp(30px,8vw,52px);line-height:1.08;margin:0 0 16px;letter-spacing:-.02em}
+p.lead{font-size:18px;line-height:1.55;color:var(--muted);margin:0 0 36px;max-width:44ch}
+.row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;min-height:84px}
+button{font:inherit;cursor:pointer;border:0;border-radius:999px;font-weight:600}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+#yes{white-space:nowrap;background:var(--accent);color:var(--accent-ink);font-size:20px;padding:16px 36px;transition:font-size .25s,padding .25s}
+#no{white-space:nowrap;background:var(--no);color:var(--ink);font-size:17px;padding:14px 28px;transition:left .22s cubic-bezier(.3,1.5,.5,1),top .22s cubic-bezier(.3,1.5,.5,1)}
+#hint{min-height:24px;margin:18px 0 0;color:var(--muted);font-size:15px}
+#done{display:none}
+#done.show{display:block}
+#ask.hide{display:none}
+dl{margin:28px 0 0;display:grid;grid-template-columns:auto 1fr;gap:10px 20px;font-size:18px}
+dt{color:var(--muted)}dd{margin:0;font-weight:600}
+.heart{position:fixed;bottom:-40px;font-size:28px;pointer-events:none;animation:up 3.4s ease-in forwards;z-index:0}
+@keyframes up{to{transform:translateY(-110vh) rotate(25deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){body{animation:none}.doodle{animation:none}.heart{display:none}#no{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <div class="moon" aria-hidden="true">🍿</div>
+  <section id="ask">
+    <h1 id="title">Підеш зі мною в кіно?</h1>
+    <p class="lead" id="lead">Попкорн за мною. Фільм обираємо разом.</p>
+    <div class="row">
+      <button id="yes">ТАК, ЗВИЧАЙНО!</button>
+      <button id="no">Ні</button>
+    </div>
+  </section>
+  <section id="done">
+    <h1>Ура! Тоді домовились</h1>
+    <p class="lead">Обери, коли тобі зручно, і додай у свій календар.</p>
+    <input type="datetime-local" id="when" aria-label="Дата і час">
+    <div><button id="cal" disabled>Додати в Google Календар</button></div>
+    <p class="note" id="note"></p>
+  </section>
+</main>
+
+<script>
+// Параметри в посиланні: ?name=Олена&email=твоя@пошта.com (пошта потрібна, щоб тебе додало гостем у подію)
+const q = new URLSearchParams(location.search);
+const name = q.get('name');
+if (name) document.getElementById('title').textContent = name + ', підеш зі мною в кіно?';
+const owner = q.get('email') || 'mosiichukyevheniii@gmail.com';
+
+const yes = document.getElementById('yes'), no = document.getElementById('no');
+const labels = ['Ні', 'Не хочу', 'Точно ні', 'Іди нафіг', 'Іди нахуй', 'Сам іди', 'Точно?', 'натисни якщо лох', 'Хаха лох', 'натисні ні', 'Ладно натискай ні', 'Повівся'];
+let tries = 0;
+
+function dodge(e){
+  if (e) e.preventDefault();
+  tries++;
+  no.textContent = labels[tries % labels.length];
+  const r = no.getBoundingClientRect();
+  const w = r.width, h = r.height, pad = 12;
+  const maxX = window.innerWidth - w - pad, maxY = window.innerHeight - h - pad;
+  let x, y, n = 0;
+  do {
+    x = pad + Math.random() * (maxX - pad);
+    y = pad + Math.random() * (maxY - pad);
+    n++;
+  } while (n < 20 && Math.hypot(x - r.left, y - r.top) < 160);
+  no.style.position = 'fixed';
+  no.style.left = x + 'px';
+  no.style.top = y + 'px';
+  const s = Math.min(20 + tries * 2, 34);
+  yes.style.fontSize = s + 'px';
+  yes.style.padding = (16 + tries) + 'px ' + (36 + tries * 3) + 'px';
+}
+['pointerenter', 'pointerdown', 'touchstart', 'focus', 'click'].forEach(ev => no.addEventListener(ev, dodge, {passive: false}));
+
+function hearts(){
+  for (let i = 0; i < 28; i++){
+    const h = document.createElement('div');
+    h.className = 'heart';
+    h.textContent = ['❤️','💖','✨','🌹'][i % 4];
+    h.style.left = Math.random() * 100 + 'vw';
+    h.style.animationDelay = Math.random() * 1.2 + 's';
+    document.body.appendChild(h);
+    setTimeout(() => h.remove(), 5000);
+  }
+}
+const when = document.getElementById('when'), cal = document.getElementById('cal');
+when.addEventListener('input', () => { cal.disabled = !when.value; });
+const fmt = d => { const z = n => String(n).padStart(2, '0'); return d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + 'T' + z(d.getHours()) + z(d.getMinutes()) + '00'; };
+cal.addEventListener('click', () => {
+  const start = new Date(when.value), end = new Date(start.getTime() + 150 * 60000);
+  let url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Кіно 🍿') + '&dates=' + fmt(start) + '/' + fmt(end) + '&details=' + encodeURIComponent('Попкорн за мною, фільм обираємо разом.');
+  if (owner) url += '&add=' + encodeURIComponent(owner);
+  window.open(url, '_blank', 'noopener');
+  document.getElementById('note').textContent = 'Подію відкрито в Google Календарі. Натисни там «Зберегти».';
+});
+
+const icons = ['🎬','🍿','🌈','⭐','🎟️','💖','☁️','🦄','🎥','✨','🍭','🌸','🎞️','🪩'];
+for (let i = 0; i < 22; i++) {
+  const d = document.createElement('span');
+  d.className = 'doodle';
+  d.textContent = icons[i % icons.length];
+  d.style.left = Math.random() * 94 + 'vw';
+  d.style.top = Math.random() * 90 + 'vh';
+  d.style.fontSize = (28 + Math.random() * 34) + 'px';
+  d.style.setProperty('--r', (Math.random() * 40 - 20) + 'deg');
+  d.style.animationDelay = (-Math.random() * 6) + 's';
+  document.body.appendChild(d);
+}
+
+yes.addEventListener('click', () => {
+  no.style.display = 'none';
+  document.getElementById('ask').classList.add('hide');
+  document.getElementById('done').classList.add('show');
+  hearts();
+});
+</script>
+</body>
+</html>
